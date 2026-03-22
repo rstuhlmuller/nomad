@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh:*)",
+      "mcp__terraform__get_latest_provider_version",
+      "Bash(chmod:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)"
+    ]
+  }
+}
