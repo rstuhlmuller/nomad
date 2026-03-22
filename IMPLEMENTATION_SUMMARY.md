@@ -24,29 +24,31 @@ A complete Terraform-managed infrastructure-as-code solution for deploying a hig
 - `terraform/modules/nomad/variables.tf` - Module variables
 - `terraform/modules/nomad/templates/nomad.hcl.tpl` - Nomad config template
 
-### Installation Scripts (3 files)
+### Installation Scripts (4 files)
 
 - `scripts/install-consul.sh` - Consul binary installation, user creation, systemd service
 - `scripts/install-nomad.sh` - Nomad binary installation, Docker setup, systemd service
-- `scripts/bootstrap.sh` - Pre-deployment validation script
+- `scripts/install-prerequisites.sh` - Install unzip and curl on all nodes
+- `scripts/bootstrap.sh` - Pre-deployment validation (SSH and passwordless sudo)
 
 ### Test Jobs (2 files)
 
 - `test-docker.nomad` - Docker driver test (nginx service)
 - `test-raw-exec.nomad` - Raw exec driver test (hello world)
 
-### Documentation (4 files)
+### Documentation (5 files)
 
-- `README.md` - Complete documentation with architecture, usage, troubleshooting
+- `README.md` - Complete documentation with architecture, usage, prerequisites
 - `QUICKSTART.md` - Quick reference for common operations
 - `DEPLOYMENT_CHECKLIST.md` - Step-by-step deployment validation
+- `TROUBLESHOOTING.md` - Common issues and solutions
 - `IMPLEMENTATION_SUMMARY.md` - This file
 
 ### Configuration Files (1 file)
 
 - `.gitignore` - Git ignore rules for Terraform state, keys, etc.
 
-**Total: 20 files created**
+**Total: 23 files created**
 
 ## Architecture Details
 

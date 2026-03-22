@@ -8,10 +8,17 @@ ssh themanofrod@10.1.0.200 "echo 'Node 1 OK'"
 ssh themanofrod@10.1.0.201 "echo 'Node 2 OK'"
 ssh themanofrod@10.1.0.202 "echo 'Node 3 OK'"
 
-# 2. Verify sudo access
-ssh themanofrod@10.1.0.200 "sudo echo 'Sudo OK'"
+# 2. Configure passwordless sudo (will prompt for password once per node)
+for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+  ssh themanofrod@$ip "echo 'themanofrod ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/themanofrod && sudo chmod 0440 /etc/sudoers.d/themanofrod"
+done
 
-# 3. Run bootstrap script
+# 3. Verify passwordless sudo (should NOT prompt for password)
+for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+  ssh themanofrod@$ip "sudo echo 'OK on $ip'"
+done
+
+# 4. Run bootstrap script
 ./scripts/bootstrap.sh
 ```
 

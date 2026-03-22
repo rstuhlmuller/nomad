@@ -11,9 +11,17 @@ Use this checklist to ensure a smooth deployment of the Nomad + Consul cluster.
   ssh themanofrod@10.1.0.202 "echo OK"
   ```
 
-- [ ] **Sudo Access Verified**
+- [ ] **Passwordless Sudo Configured**
   ```bash
-  ssh themanofrod@10.1.0.200 "sudo echo OK"
+  # Configure on all nodes (will prompt for password once per node)
+  for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+    ssh themanofrod@$ip "echo 'themanofrod ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/themanofrod && sudo chmod 0440 /etc/sudoers.d/themanofrod"
+  done
+
+  # Verify passwordless sudo works (should not prompt for password)
+  for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+    ssh themanofrod@$ip "sudo echo 'OK on $ip'"
+  done
   ```
 
 - [ ] **Terraform Installed**

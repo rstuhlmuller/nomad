@@ -23,23 +23,33 @@ case $ARCH in
         ;;
 esac
 
-# Download Nomad
-echo "Downloading Nomad for $NOMAD_ARCH..."
-cd /tmp
-curl -sLO "https://releases.hashicorp.com/nomad/$${NOMAD_VERSION}/nomad_$${NOMAD_VERSION}_linux_$${NOMAD_ARCH}.zip"
+# Install Nomad using HashiCorp's official repository
+if [ -f /etc/debian_version ]; then
+    # Debian/Ubuntu - use apt
+    echo "Setting up HashiCorp repository for Debian/Ubuntu..."
+    apt-get update
+    apt-get install -y wget gpg coreutils lsb-release
 
-# Install unzip if not present
-if ! command -v unzip &> /dev/null; then
-    echo "Installing unzip..."
-    apt-get update && apt-get install -y unzip || yum install -y unzip
+    # Add HashiCorp GPG key
+    wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    # Add HashiCorp repository
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+
+    # Install Nomad
+    apt-get update
+    apt-get install -y nomad=$NOMAD_VERSION-*
+
+elif [ -f /etc/redhat-release ]; then
+    # RHEL/CentOS - use yum
+    echo "Setting up HashiCorp repository for RHEL/CentOS..."
+    yum install -y yum-utils
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+    yum install -y nomad-$NOMAD_VERSION
+else
+    echo "Unsupported distribution"
+    exit 1
 fi
-
-# Extract and install
-echo "Installing Nomad binary..."
-unzip -o "nomad_$${NOMAD_VERSION}_linux_$${NOMAD_ARCH}.zip"
-chmod +x nomad
-mv nomad /usr/local/bin/
-rm "nomad_$${NOMAD_VERSION}_linux_$${NOMAD_ARCH}.zip"
 
 # Verify installation
 nomad version
@@ -48,11 +58,46 @@ nomad version
 if ! command -v docker &> /dev/null; then
     echo "Docker not found. Installing Docker..."
     if [ -f /etc/debian_version ]; then
-        # Debian/Ubuntu
+        # Clean up any existing Docker repo files to avoid conflicts
+        rm -f /etc/apt/sources.list.d/docker.list
+
         apt-get update
         apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg || true
-        echo "deb [arch=$NOMAD_ARCH signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null || true
+
+        # Detect OS - check for Debian or Ubuntu
+        if [ -f /etc/os-release ]; then
+            . /etc/os-release
+        fi
+
+        # Map architecture for Docker
+        DOCKER_ARCH=$NOMAD_ARCH
+
+        # Determine which repository to use
+        if grep -qi debian /etc/os-release 2>/dev/null || [ "$ID" = "debian" ]; then
+            echo "Detected Debian system..."
+            DOCKER_REPO="debian"
+            VERSION_CODENAME=$(lsb_release -cs)
+
+            # For Debian trixie (testing) or sid, fall back to bookworm (latest stable)
+            if [ "$VERSION_CODENAME" = "trixie" ] || [ "$VERSION_CODENAME" = "sid" ]; then
+                echo "Debian $VERSION_CODENAME detected, using bookworm repository..."
+                VERSION_CODENAME="bookworm"
+            fi
+
+            curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor --batch --yes -o /usr/share/keyrings/docker-archive-keyring.gpg
+            echo "deb [arch=$DOCKER_ARCH signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $VERSION_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        elif grep -qi ubuntu /etc/os-release 2>/dev/null || [ "$ID" = "ubuntu" ]; then
+            echo "Detected Ubuntu system..."
+            DOCKER_REPO="ubuntu"
+            VERSION_CODENAME=$(lsb_release -cs)
+
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --batch --yes -o /usr/share/keyrings/docker-archive-keyring.gpg
+            echo "deb [arch=$DOCKER_ARCH signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        else
+            echo "Error: Unable to detect Debian or Ubuntu"
+            exit 1
+        fi
+
         apt-get update
         apt-get install -y docker-ce docker-ce-cli containerd.io
     elif [ -f /etc/redhat-release ]; then

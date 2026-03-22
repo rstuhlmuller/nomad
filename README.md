@@ -26,7 +26,18 @@ Before deployment, ensure:
    ssh-copy-id themanofrod@10.1.0.202
    ```
 
-2. **Sudo Access**: User has sudo privileges on all nodes
+2. **Passwordless Sudo**: User has passwordless sudo privileges on all nodes
+   ```bash
+   # Configure passwordless sudo on all nodes
+   for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+     ssh themanofrod@$ip "echo 'themanofrod ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/themanofrod && sudo chmod 0440 /etc/sudoers.d/themanofrod"
+   done
+
+   # Verify it works
+   for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+     ssh themanofrod@$ip "sudo echo 'OK on $ip'"
+   done
+   ```
 
 3. **Network Connectivity**: Required ports are open:
    - **Consul**: 8300, 8301, 8302, 8500, 8600
@@ -174,25 +185,28 @@ This will:
 
 ## Troubleshooting
 
-### Consul Not Forming Cluster
+For detailed troubleshooting steps and solutions to common issues, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
-1. Check logs: `sudo journalctl -u consul -n 50`
-2. Verify network connectivity: `consul members`
-3. Check firewall rules for ports 8300-8302, 8500, 8600
+Common issues covered:
+- **Terraform hangs during apply** - Passwordless sudo not configured
+- **Consul cluster not forming** - Network or firewall issues
+- **Nomad cluster not starting** - Consul dependency issues
+- **Jobs not running** - Resource constraints or Docker issues
+- **Cannot access UIs** - Firewall or binding issues
+- **Complete cluster reset** - Start fresh procedure
 
-### Nomad Not Starting
+Quick checks:
 
-1. Check Consul is healthy first
-2. View logs: `sudo journalctl -u nomad -n 50`
-3. Verify Docker is running: `sudo systemctl status docker`
-4. Check Nomad status: `nomad node status`
+```bash
+# Check service status
+for ip in 10.1.0.200 10.1.0.201 10.1.0.202; do
+  echo "=== $ip ==="
+  ssh themanofrod@$ip "sudo systemctl status consul nomad"
+done
 
-### Jobs Not Running
-
-1. Check node eligibility: `nomad node status`
-2. Check job status: `nomad job status <job-name>`
-3. View allocation logs: `nomad alloc logs <allocation-id>`
-4. Check Consul service registration: `consul catalog services`
+# Check cluster health
+ssh themanofrod@10.1.0.200 "consul members && nomad server members && nomad node status"
+```
 
 ## Directory Structure
 

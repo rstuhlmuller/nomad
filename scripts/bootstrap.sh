@@ -34,7 +34,37 @@ for server in "${SERVERS[@]}"; do
 done
 
 echo ""
-echo "All connectivity checks passed!"
+
+# Check passwordless sudo
+echo "Checking passwordless sudo access..."
+SUDO_FAILED=()
+
+for server in "${SERVERS[@]}"; do
+    echo -n "Testing sudo on $server... "
+    if ssh -o ConnectTimeout=5 -o BatchMode=yes "$SSH_USER@$server" "sudo -n echo 'OK'" &> /dev/null; then
+        echo "Success"
+    else
+        echo "Failed!"
+        SUDO_FAILED+=("$server")
+    fi
+done
+
+if [ ${#SUDO_FAILED[@]} -gt 0 ]; then
+    echo ""
+    echo "Error: Passwordless sudo is not configured on: ${SUDO_FAILED[*]}"
+    echo ""
+    echo "To fix this, run the following command:"
+    echo ""
+    echo "for ip in ${SUDO_FAILED[*]}; do"
+    echo "  ssh $SSH_USER@\$ip \"echo '$SSH_USER ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 0440 /etc/sudoers.d/$SSH_USER\""
+    echo "done"
+    echo ""
+    echo "Then run this bootstrap script again."
+    exit 1
+fi
+
+echo ""
+echo "All checks passed!"
 echo ""
 
 # Navigate to terraform directory

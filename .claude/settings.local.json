@@ -5,7 +5,8 @@
       "mcp__terraform__get_latest_provider_version",
       "Bash(chmod:*)",
       "Bash(tree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "WebFetch(domain:developer.hashicorp.com)"
     ]
   }
 }
